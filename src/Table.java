@@ -86,7 +86,7 @@ public class Table {
      */
     public boolean deck_needs_shuffle(){
         //if deck_penetration percentage of cards have been dealt, return true, else false
-        return (deck.size()/(52*shoe_size) + deck_penetration <= 1);
+        return (deck.size()/(52*shoe_size) + penetration <= 1);
     }
 
     /**
@@ -97,16 +97,18 @@ public class Table {
      *  @param deck_size (int): number of cards remaining in deck (usually should be deck.size())
      *
      * Returns:
-     *  True count (double)
+     *  Rounded true count (int)
     */
-    public double calculate_true_count(){
-        return double(running_count)/(double(deck.size())/52.0);
+    public int calculate_true_count(){
+        double unrounded_count = (double)(running_count)/((double)(deck.size())/52.0);
+        return (int)(unrounded_count);
     }
 
     /**
      * Adds money from the bankroll to the pot based on the true count and the
      */
     public void make_bet(){
+      return;
     }
 
     /**
@@ -151,6 +153,13 @@ public class Table {
 
 
     /**
+     * Updates the dealer hand in accordance with the given ruleset.
+     */
+    public void make_dealer_decision(List<Integer> deck, List<Integer> dealer_hand, int running_count) {
+        return;
+    }
+
+    /**
      * Given the dealer and player hands, plays the game optimally
      * Recursively iterates until an end condition is reached (stand, double, bust or blackjack)
      * Keeps track of running count, and constantly makes best decision as count changes
@@ -158,25 +167,26 @@ public class Table {
     public boolean make_player_decision() {
         // Make player decision
         for(int i = 0; i < 4; i++){
-            hand = player_hands.get(i);
+            List<Integer> hand = player_hands.get(i);
             if (hand.isEmpty()) {break;}
             play_hand(hand);
         }
 
         // Increment the count if hit
+        return true;
     }
 
     /**
      * plays a single hand. If necessary, will add a player_hand and deal out the extra cards.
      */
-    public void play_hand(List hand){
+    public void play_hand(List<Integer> hand){
         //play the hand
         boolean keep_playing = true;
         while(keep_playing){
             // HANDLE SURRENDER
             
             // HANDLE ALL SPLITS
-            if(should_split()){
+            if(should_split(hand)){
                 split(hand);
                 continue;
             }
@@ -194,7 +204,7 @@ public class Table {
      * @param hand
      * @return
      */
-    private boolean should_split(List hand){
+    private boolean should_split(List<Integer> hand){
         if (hand.size() != 2) {return false;}
 
         int carda = hand.get(0);
@@ -234,13 +244,14 @@ public class Table {
             return dealer != 7 || dealer != 10 || dealer != 1;
         }
         if(carda == 10) {return false;}
+        return false;
     }
 
     /**
      * Splits the hand into two hands if allowed (max 3 splits)
      * @param hand
      */
-    private void split(List hand){
+    private void split(List<Integer> hand){
         //split if necessary
         for(int i = 0; i < 4; i++){
             if (player_hands.get(i).isEmpty()){
@@ -284,8 +295,15 @@ public class Table {
      * @return
      */
     public Stats get_stats(){
-        return stats = new Stats()
+        return new Stats();
 
+    }
+
+    /**
+     * Compares Player hand(s) to Dealer and pays winnings and subtracts losses.
+     */
+    public void pay_out() {
+      return;
     }
 
     /**
@@ -300,6 +318,7 @@ public class Table {
      *
      */
     public Stats play_target_hours(double target_hours){
+        int hours_played = 0;
         while(hours_played < target_hours && bankroll > 0.0){
             //THE BIG LOOP
             if (deck_needs_shuffle()){
@@ -314,11 +333,11 @@ public class Table {
 
             pay_out();
         }
-        return Table.get_stats()
+        return get_stats();
     }
 }
 
 
-private class Stats(){
+class Stats{
 
 }
