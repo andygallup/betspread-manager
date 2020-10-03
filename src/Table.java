@@ -78,10 +78,10 @@ public class Table {
     }
 
     /**
-    Calculates true count based on running count and remaining shoe size.
-    **/
+    * Calculates true count based on running count and decks_remaining
+    */
     public double calculate_true_count(){
-        return -1.0;
+        return running_count/(deck.size()/52.0);
     }
 
     /**
