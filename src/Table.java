@@ -174,7 +174,7 @@ public class Table {
         boolean keep_playing = true;
         while(keep_playing){
             // HANDLE SURRENDER
-            
+
             // HANDLE ALL SPLITS
             if(should_split()){
                 split(hand);
