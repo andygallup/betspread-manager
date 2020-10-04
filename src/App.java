@@ -40,7 +40,7 @@ public class App{
             shoe_size = 6;
             penetration = 0.75;
             hit_on_soft = true;
-            original_bankroll = 9000;
+            original_bankroll = 1000000;
             target_hours = 100;
             run_count = 1;
         }

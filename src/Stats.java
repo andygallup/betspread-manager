@@ -19,6 +19,7 @@ public class Stats {
     private int number_of_hits;
     private int number_of_stands;
     private double avg_bet_size;
+    private int number_of_blackjacks;
 
     public String toString(){
         String str = "";
@@ -34,6 +35,7 @@ public class Stats {
         str = str + "NUMBER OF HITS: " + get_number_of_hits() + "\n";
         str = str + "NUMBER OF STANDS: " + get_number_of_stands() + "\n";
         str = str + "AVERAGE BET SIZE: " + get_avg_bet_size() + "\n";
+        str = str + "NUMBER OF BLACKJACKS: " + get_number_of_blackjacks() + "\n";
 
         return str;
     }
@@ -86,6 +88,10 @@ public class Stats {
         return avg_bet_size;
     }
 
+    public int get_number_of_blackjacks() {
+        return number_of_blackjacks;
+    }
+
     public void set_final_bankroll(double final_bankroll) {
         this.final_bankroll = final_bankroll;
     }
@@ -132,5 +138,9 @@ public class Stats {
 
     public void set_avg_bet_size(double avg_bet_size) {
         this.avg_bet_size = avg_bet_size;
+    }
+
+    public void set_number_of_blackjacks(int number_of_blackjacks) {
+        this.number_of_blackjacks = number_of_blackjacks;
     }
 }

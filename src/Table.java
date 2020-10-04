@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import static java.lang.Math.floor;
 
 
 public class Table {
@@ -39,6 +40,7 @@ public class Table {
     private int number_of_stands;
     private int hands_played;
     private double total_bet_amount;
+    private int number_of_blackjacks;
 
     public Table(int table_min, int spread, int hands_per_hr, int shoe_size, double penetration, boolean hit_on_soft, double original_bankroll) {
         this.table_min = table_min;
@@ -68,6 +70,7 @@ public class Table {
     public void shuffle(){
         //Empty the deck
         deck.clear();
+        running_count = 0;
 
         //Repopulate the deck
         List<Integer> fresh_deck = Arrays.asList(1,1,1,1,
@@ -120,12 +123,12 @@ public class Table {
      */
     public void make_bet(){
         // Clear the pots
-        for (int i = 0; i < player_hands.size(); i++) {
+        for (int i = 0; i < pot.length; i++) {
             pot[i] = 0.0;
         }
 
         double count = calculate_true_count();
-        int rounded_count = (int)(count);
+        double rounded_count = floor(count);
         double max_bet = spread * table_min;
         double bet = 0.0;
 
@@ -304,6 +307,7 @@ public class Table {
      * @return
      */
     private boolean should_split(List<Integer> hand){
+        if (!player_hands.get(3).isEmpty()) {return false;}
         if (hand.size() != 2) {return false;}
 
         int carda = hand.get(0);
@@ -371,6 +375,7 @@ public class Table {
                 bankroll -= pot[index];
                 pot[i] = pot[index];
                 total_bet_amount += pot[index];
+                hands_played++;
                 return;
             }
         }
@@ -456,8 +461,8 @@ public class Table {
             throw new RuntimeException("Trying to double an uninitiated hand, index: " + index);
         }
         bankroll -= pot[index];
-        pot[index] = pot[index] * 2;
         total_bet_amount += pot[index];
+        pot[index] = pot[index] * 2;
     }
 
     /**
@@ -605,6 +610,7 @@ public class Table {
         stats.set_number_of_hits(number_of_hits);
         stats.set_number_of_stands(number_of_stands);
         stats.set_avg_bet_size(total_bet_amount/(double)(hands_played));
+        stats.set_number_of_blackjacks(number_of_blackjacks);
         return stats;
     }
 
@@ -640,6 +646,7 @@ public class Table {
             } else if (dealer_sum < player_sum) {
                 bankroll += 2 * pot[i];
                 if (player_sum == 21 && hand.size() == 2){
+                    number_of_blackjacks++;
                     bankroll += 0.5 * pot[i];
                 }
                 continue;
@@ -663,7 +670,8 @@ public class Table {
      */
     public Stats play_target_hours(double target_hours){
         double hours_played = 0.0;
-        while(hours_played < target_hours && bankroll > 0.0){
+        //while(hours_played < target_hours && bankroll > 0.0){
+        while(hands_played < 1000000 && bankroll > 0.0){
             //THE BIG LOOP
             if (deck_needs_shuffle()){
                 shuffle();
