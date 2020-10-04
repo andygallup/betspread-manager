@@ -1,11 +1,11 @@
-/**
- Oct 3, 2020
+/*
+  Oct 3, 2020
 
- Table class
- Holds data for blackjack play. Includes shoe, table rules, player/dealer hands.
- "plays the game"
+  Table class
+  Holds data for blackjack play. Includes shoe, table rules, player/dealer hands.
+  "plays the game"
 
- **/
+ */
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -102,15 +102,13 @@ public class Table {
      */
     public boolean deck_needs_shuffle(){
         //if deck_penetration percentage of cards have been dealt, return true, else false
-        return (deck.size()/(52*shoe_size) + penetration <= 1);
+        double max_deck_size = 52*(double)shoe_size;
+        double percentage_of_cards_left_in_deck = (double)(deck.size())/max_deck_size;
+        return (percentage_of_cards_left_in_deck <= penetration);
     }
 
     /**
     * Calculates true count based on running count and decks_remaining
-     *
-     * Args:
-     *  @param running (int) : Running Count (usually should be running_count)
-     *  @param deck_size (int): number of cards remaining in deck (usually should be deck.size())
      *
      * Returns:
      *  Rounded (floored) true count (int)
@@ -213,7 +211,6 @@ public class Table {
         add_card_to_count(cardb);
 
         if (dealer_hand.contains(1) && dealer_hand.contains(10)) {
-            //TODO: WHAT TO DO IN BLACKJACK CASE
             return;
         }
 
@@ -258,6 +255,7 @@ public class Table {
      */
     public boolean make_player_decision() {
         // Make player decision
+        // If player should buy insurance
         if (dealer_hand.get(0) == 1 && calculate_true_count() >= 3) {
             insurance = true;
             bankroll -= pot[0]/2.0;
@@ -266,6 +264,7 @@ public class Table {
                 return true;
             }
         }
+        // Otherwise, iterate through the player hands and play them
         for(int i = 0; i < 4; i++){
             List<Integer> hand = player_hands.get(i);
             if (hand.isEmpty()) {break;}
@@ -679,7 +678,6 @@ public class Table {
      * or until bankroll reaches 0.
      *
      * @param target_hours
-     * @param target_profit
      *
      * Returns:
      *  stats (Stats)
