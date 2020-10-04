@@ -197,7 +197,8 @@ public class Table {
             }
             int curr_sum = sum_hand(dealer_hand);
             if (curr_sum == 7 && hit_on_soft) {
-                add_card_to_hand(dealer_hand);
+                int card = add_card_to_hand(dealer_hand);
+                curr_sum += card;
             }
             if (curr_sum <= 11) {
                 return;
@@ -402,6 +403,9 @@ public class Table {
                 continue;
             } else if (dealer_sum < player_sum) {
                 bankroll += 2 * pot[i];
+                if (player_sum == 21 && hand.size() == 2){
+                    bankroll += 0.5 * pot[i];
+                }
                 continue;
             } else {
                 bankroll += pot[i];
