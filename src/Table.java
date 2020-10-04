@@ -23,8 +23,8 @@ public class Table {
     private final double original_bankroll;
     private int rounds_played;
     private double bankroll;
-    private int pot;
     private int running_count;
+    private List<Integer> pot;
     private List<Integer> deck;
     private List<Integer> dealer_hand;
     private List<ArrayList<Integer>> player_hands;
@@ -123,17 +123,12 @@ public class Table {
         dealer_hand.clear();
 
         //pop 4 cards off of deck, 2 to each hand
-        int first_card = deck.remove(deck.size()-1);
-        add_card_to_count(first_card);
-        player_hands.get(0).add(first_card);
-        int second_card = deck.remove(deck.size()-1);
-        add_card_to_count(second_card);
-        dealer_hand.add(second_card);
-        int third_card = deck.remove(deck.size()-1);
-        add_card_to_count(third_card);
-        player_hands.get(0).add(third_card);
+        add_card_to_hand(player_hands.get(0));
+        add_card_to_hand(player_hands.get(0));
+        add_card_to_hand(dealer_hand);
+
         int fourth_card = deck.remove(deck.size()-1);
-        add_card_to_count(fourth_card);
+        // Do not add dealer's second card to count until make_dealer_decision method
         dealer_hand.add(fourth_card);
     }
 
@@ -151,17 +146,73 @@ public class Table {
         }
     }
 
+    private int add_card_to_hand(List<Integer> hand) {
+        int card = deck.remove(deck.size() - 1);
+        add_card_to_count(card);
+        hand.add(card);
+        return card;
+    }
+
+    /**
+     * sums the hand, assuming A = 1.
+     */
+    private int sum_hand(List<Integer> hand) {
+        int total = 0;
+        for (Integer i : hand) {
+            total += i;
+        }
+        return total;
+    }
+
 
     /**
      * Updates the dealer hand in accordance with the given ruleset.
      */
-    public void make_dealer_decision(List<Integer> deck, List<Integer> dealer_hand, int running_count) {
+    public void make_dealer_decision() {
+        int carda = dealer_hand.get(0);
+        int cardb = dealer_hand.get(1);
+        // Add the hidden dealer card to the count
+        add_card_to_count(cardb);
+
+        if (dealer_hand.contains(1) && dealer_hand.contains(10)) {
+            //TODO: WHAT TO DO IN BLACKJACK CASE
+            return;
+        }
+
+        boolean isSoft = (carda == 1) || (cardb == 1);
+
+        if (!isSoft) {
+            while (sum_hand(dealer_hand) < 17) {
+                int card = add_card_to_hand(dealer_hand);
+                if (card == 1 && sum_hand(dealer_hand) < 12) {
+                    isSoft = true;
+                    break;
+                }
+            }
+        }
+        if (isSoft) {
+            while (sum_hand(dealer_hand) < 7) {
+                add_card_to_hand(dealer_hand);
+            }
+            int curr_sum = sum_hand(dealer_hand);
+            if (curr_sum == 7 && hit_on_soft) {
+                add_card_to_hand(dealer_hand);
+            }
+            if (curr_sum <= 11) {
+                return;
+            } else { // hard totals again
+                while (sum_hand(dealer_hand) < 17) {
+                    add_card_to_hand(dealer_hand);
+                }
+                return;
+            }
+        }
         return;
     }
 
     /**
      * Given the dealer and player hands, plays the game optimally
-     * Recursively iterates until an end condition is reached (stand, double, bust or blackjack)
+     * Iterates until an end condition is reached (stand, double, bust or blackjack)
      * Keeps track of running count, and constantly makes best decision as count changes
      */
     public boolean make_player_decision() {
@@ -329,7 +380,7 @@ public class Table {
 
             make_player_decision();
 
-            make_dealer_decision(deck, dealer_hand, running_count);
+            make_dealer_decision();
 
             pay_out();
         }
