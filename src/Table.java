@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+
 public class Table {
     // Class variables
     private final int table_min;
@@ -21,13 +22,23 @@ public class Table {
     private final double penetration;
     private final boolean hit_on_soft;
     private final double original_bankroll;
-    private int rounds_played;
     private double bankroll;
     private int running_count;
     private double[] pot;
     private List<Integer> deck;
     private List<Integer> dealer_hand;
     private List<ArrayList<Integer>> player_hands;
+
+    //Stat trackers
+    private double biggest_win;
+    private double biggest_loss;
+    private int number_of_splits;
+    private int number_of_surrenders;
+    private int number_of_doubles;
+    private int number_of_hits;
+    private int number_of_stands;
+    private int hands_played;
+    private double total_bet_amount;
 
     public Table(int table_min, int spread, int hands_per_hr, int shoe_size, double penetration, boolean hit_on_soft, double original_bankroll) {
         this.table_min = table_min;
@@ -38,7 +49,6 @@ public class Table {
         this.hit_on_soft = hit_on_soft;
         this.bankroll = original_bankroll;
         this.original_bankroll = original_bankroll;
-        this.rounds_played = 0;
         this.running_count = 0;
         this.deck = new ArrayList<Integer>();
         this.dealer_hand = new ArrayList<Integer>();
@@ -46,7 +56,7 @@ public class Table {
         for (int i = 0; i < 4; i++){
             player_hands.add(new ArrayList<Integer>());
         }
-        double[] pot = new double[4];
+        this.pot = new double[4];
 
         shuffle();
     }
@@ -98,18 +108,36 @@ public class Table {
      *  @param deck_size (int): number of cards remaining in deck (usually should be deck.size())
      *
      * Returns:
-     *  Rounded true count (int)
+     *  Rounded (floored) true count (int)
     */
-    public int calculate_true_count(){
-        double unrounded_count = (double)(running_count)/((double)(deck.size())/52.0);
-        return (int)(unrounded_count);
+    public double calculate_true_count(){
+        return (double)(running_count)/((double)(deck.size())/52.0);
     }
 
     /**
      * Adds money from the bankroll to the pot based on the true count and the
+     * Assumes a 1-12 spread
      */
     public void make_bet(){
-      return;
+        // Clear the pots
+        for (int i = 0; i < player_hands.size(); i++) {
+            pot[i] = 0.0;
+        }
+
+        double count = calculate_true_count();
+        int rounded_count = (int)(count);
+        double max_bet = spread * table_min;
+        double bet = 0.0;
+
+        // determine our bet based on the count
+        if(rounded_count <= 1){bet = table_min;}
+        if(rounded_count == 2){bet = (1.0/3.0) * max_bet;}
+        if(rounded_count == 3){bet = (2.0/3.0) * max_bet;}
+        if(rounded_count >= 4){bet = max_bet;}
+
+        bankroll -= bet;
+        pot[0] = bet;
+        total_bet_amount += bet;
     }
 
     /**
@@ -147,6 +175,11 @@ public class Table {
         }
     }
 
+    /**
+     * given a hand, draw a card from the shoe and update the running count
+     * @param hand
+     * @return
+     */
     private int add_card_to_hand(List<Integer> hand) {
         int card = deck.remove(deck.size() - 1);
         add_card_to_count(card);
@@ -164,7 +197,6 @@ public class Table {
         }
         return total;
     }
-
 
     /**
      * Updates the dealer hand in accordance with the given ruleset.
@@ -217,38 +249,52 @@ public class Table {
      * Iterates until an end condition is reached (stand, double, bust or blackjack)
      * Keeps track of running count, and constantly makes best decision as count changes
      */
-    public boolean make_player_decision() {
+    public void make_player_decision() {
         // Make player decision
         for(int i = 0; i < 4; i++){
             List<Integer> hand = player_hands.get(i);
             if (hand.isEmpty()) {break;}
-            play_hand(hand);
+            play_hand(hand, i);
         }
-
-        // Increment the count if hit
-        return true;
     }
 
     /**
      * plays a single hand. If necessary, will add a player_hand and deal out the extra cards.
      */
-    public void play_hand(List<Integer> hand){
+    public void play_hand(List<Integer> hand, int index){
         //play the hand
         boolean keep_playing = true;
         while(keep_playing){
-            // HANDLE SURRENDER
-
             // HANDLE ALL SPLITS
             if(should_split(hand)){
-                split(hand);
+                split(hand, index);
+                number_of_splits++;
                 continue;
             }
 
+            // HANDLE SURRENDER (assumes no late surrender)
+            if(should_surrender(hand)){
+                surrender(index);
+                number_of_surrenders++;
+                return;
+            }
+
             // HANDLE ALL DOUBLES
+            if(should_double(hand)){
+                doubleHand(hand, index);
+                number_of_doubles++;
+                return;
+            }
 
-            // HANDLE REMAINING SOFT TOTALS
-
-            // HANDLE REMAINING HARD TOTALS
+            // HANDLE HITS
+            if(should_hit(hand)){
+                add_card_to_hand(hand);
+                number_of_hits++;
+            }
+            else{
+                number_of_stands++;
+                return;
+            }
         }
     }
 
@@ -263,7 +309,7 @@ public class Table {
         int carda = hand.get(0);
         int cardb = hand.get(1);
         int dealer = dealer_hand.get(0);
-        int count = calculate_true_count();
+        double count = calculate_true_count();
 
         if(carda != cardb) {return false;}
         if(carda == 1) {return true;}
@@ -292,7 +338,12 @@ public class Table {
         if(carda == 7) {
             return 1 < dealer && dealer < 8;
         }
-        if(carda == 8) {return true;}
+        if(carda == 8) {
+            if(hit_on_soft && dealer_hand.get(0) == 1){
+                return false;
+            }
+            return true;
+        }
         if(carda == 9) {
             return dealer != 7 || dealer != 10 || dealer != 1;
         }
@@ -304,25 +355,95 @@ public class Table {
      * Splits the hand into two hands if allowed (max 3 splits)
      * @param hand
      */
-    private void split(List<Integer> hand){
+    private void split(List<Integer> hand, int index){
         //split if necessary
-        for(int i = 0; i < 4; i++){
+        for(int i = index + 1; i < 4; i++){
             if (player_hands.get(i).isEmpty()){
                 // remove second card from first hand
                 int split_card = hand.remove(1);
                 // add second card to second hand
                 player_hands.get(i).add(split_card);
                 // get a card from the deck to add to the first hand
-                int first_card = deck.remove(deck.size()-1);
-                add_card_to_count(first_card);
-                hand.add(first_card);
+                add_card_to_hand(hand);
                 // get a card from the deck to add to the second hand
-                int second_card = deck.remove(deck.size()-1);
-                add_card_to_count(second_card);
-                player_hands.get(i).add(second_card);
-
+                add_card_to_hand(player_hands.get(i));
+                // put more money in the pot for the second hand
+                bankroll -= pot[index];
+                pot[i] = pot[index];
+                total_bet_amount += pot[index];
                 return;
             }
+        }
+    }
+
+    /**
+     * given a hand, determine if the player should double
+     * @param hand
+     * @return boolean
+     * Returns true if player should double, false if otherwise
+     */
+    private boolean should_double(List<Integer> hand) {
+        // can only double initial (two card) hands
+        if (hand.size() > 2){
+            return false;
+        }
+        // Soft total
+        if (hand.contains(1) && sum_hand(hand) < 12){
+            int sum = sum_hand(hand) + 10;
+            int dealer = dealer_hand.get(0);
+            if ((sum == 13 || sum == 14) && (dealer == 5 || dealer == 6)){
+                return true;
+            }
+            if ((sum == 15 || sum == 16) && (dealer == 4 || dealer == 5 || dealer == 6)){
+                return true;
+            }
+            if ((sum == 17 || sum == 18) && (dealer == 3 || dealer == 4 || dealer == 5 || dealer == 6)){
+                return true;
+            }
+            if (sum == 18 && dealer == 2 && hit_on_soft) {
+                return true;
+            }
+            if (sum == 19 && dealer == 6 && hit_on_soft) {
+                return true;
+            }
+            return false;
+        }
+        // hard totals
+        else{
+            int sum = sum_hand(hand);
+            int dealer = dealer_hand.get(0);
+            double count = calculate_true_count();
+
+            if (sum == 9){
+                if (dealer == 3 || dealer == 4 || dealer == 5 || dealer == 6){
+                    return true;
+                }
+                if (dealer == 2 && count >= 1){
+                    return true;
+                }
+                if (dealer == 7 && count >= 4){
+                    return true;
+                }
+            }
+            if (sum == 10){
+                if (dealer != 10 && dealer != 1){
+                    return true;
+                }
+                if (count >= 4){
+                    //TODO: check with ben about doing this at TC3 in a H17 game
+                    return true;
+                }
+            }
+            if (sum == 11){
+                if (hit_on_soft && count < 0 && dealer == 1) {
+                    return false;
+                }
+                if (!hit_on_soft && count < 1 && dealer == 1) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
         }
     }
 
@@ -336,6 +457,56 @@ public class Table {
         }
         bankroll -= pot[index];
         pot[index] = pot[index] * 2;
+        total_bet_amount += pot[index];
+    }
+
+    /**
+     * given a hand, determine if the player should surrender
+     * @param hand
+     * @return
+     */
+    private boolean should_surrender(List<Integer> hand){
+        // can only surrender 2 card hands (TODO: allow late surrender?)
+        if (hand.size() > 2) {return false;}
+        // Soft total
+        if (hand.contains(1) && sum_hand(hand) < 12){
+            return false;
+        }
+        int dealer = dealer_hand.get(0);
+        // Handle pair of 8s
+        if (hand.get(0) == 8 && hand.get(1) == 8){
+            if(dealer == 1 && hit_on_soft){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        // Hard total
+        int sum = sum_hand(hand);
+        double count = calculate_true_count();
+
+        if (sum == 14 && dealer == 10 && count >= 3){
+            return true;
+        }
+        if (sum == 15){
+            if (dealer == 10 && count > 0){
+                return true;
+            }
+            if (dealer == 1 && (hit_on_soft || count >= 1)){
+                return true;
+            }
+            if (dealer == 9 && count >= 2){
+                return true;
+            }
+        }
+        if(sum == 16 && (dealer == 9 || dealer == 10 || dealer == 1)){
+            return true;
+        }
+        if(sum == 17 && dealer == 1 && hit_on_soft){
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -347,17 +518,70 @@ public class Table {
     }
 
     /**
+     * given a hand, determine if the player should hit
+     * @param hand
+     * @return
+     */
+    private boolean should_hit(List<Integer> hand){
+        int sum = sum_hand(hand);
+        int dealer = dealer_hand.get(0);
+        double count = calculate_true_count();
+
+        //Soft totals
+        if(hand.contains(1) && sum < 12){
+            if(sum < 8){
+                return true;
+            }
+            if(sum == 8 && (dealer == 9 || dealer == 10 || dealer == 1)){
+                return true;
+            }
+            return false;
+        }
+        //Hard totals
+        if(sum < 12){return true;}
+        if(sum == 12){
+            if(count >= 3 && (dealer > 6 || dealer == 1)) {return true;}
+            if(count >= 2 && (dealer > 6 || dealer < 3)) {return true;}
+            if(count >= 0 && (dealer > 6 || dealer < 4)) {return true;}
+            if(count <= 0 && (dealer > 6 || dealer < 5)) {return true;}
+            if(count <= -1 && dealer != 5) {return true;}
+            if(count <= -2) {return true;}
+            return false;
+        }
+        if(sum == 13 || sum == 14){
+            if(dealer > 6 || dealer == 1) {return true;}
+            return false;
+        }
+        if(sum == 15){
+            if(count >= 4 && dealer == 10) {return false;}
+            if(dealer > 6 || dealer == 1) {return true;}
+            return false;
+        }
+        if(sum == 16){
+            if(count > 0 && dealer == 10) {return false;}
+            if(count >= 5 && dealer == 9) {return false;}
+            if(dealer > 6 || dealer == 1) {return true;}
+            return false;
+        }
+        if(sum >= 17){return false;} //Assumes you've already surrendered in a H17 game into A
+        else{return false;}
+    }
+
+    /**
      * Resets the table status.
      * Convenience method to avoid creating new table instances for every loop in App.java
      */
     public void reset(){
         bankroll = original_bankroll;
-        rounds_played = 0;
         running_count = 0;
         deck.clear();
         dealer_hand.clear();
         for (int i = 0; i < 4; i++){
             player_hands.get(i).clear();
+        }
+        // Clear the pots
+        for (int i = 0; i < player_hands.size(); i++) {
+            pot[i] = 0.0;
         }
 
         shuffle();
@@ -367,9 +591,21 @@ public class Table {
      * Generates a Stats object from the table state
      * @return
      */
-    public Stats get_stats(){
-        return new Stats();
-
+    public Stats get_stats(double hours_played){
+        Stats stats = new Stats();
+        stats.set_final_bankroll(bankroll);
+        stats.set_bankroll_delta(bankroll-original_bankroll);
+        stats.set_hours_played(hours_played);
+        stats.set_biggest_win(-1.0);
+        stats.set_biggest_loss(-1.0);
+        stats.set_rounds_played(hands_played);
+        stats.set_number_of_splits(number_of_splits);
+        stats.set_number_of_doubles(number_of_doubles);
+        stats.set_number_of_surrenders(number_of_surrenders);
+        stats.set_number_of_hits(number_of_hits);
+        stats.set_number_of_stands(number_of_stands);
+        stats.set_avg_bet_size(total_bet_amount/(double)(hands_played));
+        return stats;
     }
 
     /**
@@ -412,7 +648,6 @@ public class Table {
                 continue;
             }
         }
-
     }
 
     /**
@@ -427,12 +662,14 @@ public class Table {
      *
      */
     public Stats play_target_hours(double target_hours){
-        int hours_played = 0;
+        double hours_played = 0.0;
         while(hours_played < target_hours && bankroll > 0.0){
             //THE BIG LOOP
             if (deck_needs_shuffle()){
                 shuffle();
             }
+
+            make_bet();
 
             deal_cards();
 
@@ -441,12 +678,10 @@ public class Table {
             make_dealer_decision();
 
             pay_out();
+
+            hours_played += 1/(double)hands_per_hr;
+            hands_played++;
         }
-        return get_stats();
+        return get_stats(hours_played);
     }
-}
-
-
-class Stats{
-
 }
