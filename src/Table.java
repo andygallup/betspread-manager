@@ -24,7 +24,7 @@ public class Table {
     private int rounds_played;
     private double bankroll;
     private int running_count;
-    private List<Integer> pot;
+    private double[] pot;
     private List<Integer> deck;
     private List<Integer> dealer_hand;
     private List<ArrayList<Integer>> player_hands;
@@ -46,6 +46,7 @@ public class Table {
         for (int i = 0; i < 4; i++){
             player_hands.add(new ArrayList<Integer>());
         }
+        double[] pot = new double[4];
 
         shuffle();
     }
@@ -325,6 +326,26 @@ public class Table {
     }
 
     /**
+     * Adds a card to the hand and doubles the correct pot.
+     */
+    private void doubleHand(List<Integer> hand, int index) {
+        add_card_to_hand(hand);
+        if (!(pot[index] > 0)) {
+            throw new RuntimeException("Trying to double an uninitiated hand, index: " + index);
+        }
+        bankroll -= pot[index];
+        pot[index] = pot[index] * 2;
+    }
+
+    /**
+     * Makes hand disappear so that it isn't picked up by pay_out and returns half the pot.
+     */
+    private void surrender(int index) {
+        player_hands.get(index).clear();
+        bankroll += pot[index] / 2;
+    }
+
+    /**
      * Resets the table status.
      * Convenience method to avoid creating new table instances for every loop in App.java
      */
@@ -351,10 +372,43 @@ public class Table {
     }
 
     /**
-     * Compares Player hand(s) to Dealer and pays winnings and subtracts losses.
+     * Compares Player hand(s) to Dealer and pays winning: losses were already subtracted.
      */
     public void pay_out() {
-      return;
+        for (int i = 0; i < player_hands.size(); i++) {
+            List<Integer> hand = player_hands.get(i);
+            if (hand.isEmpty()) {
+                continue;
+            }
+            int player_sum = sum_hand(hand);
+
+            if (player_sum > 21) {
+                continue;
+            }
+            if (player_sum < 12 && hand.contains(1)) {
+                player_sum += 10;
+            }
+            int dealer_sum = sum_hand(dealer_hand);
+
+            if (dealer_sum > 21) {
+                bankroll += 2 * pot[i];
+                continue;
+            }
+            if (dealer_sum < 12 && dealer_hand.contains(1)) {
+                dealer_sum += 10;
+            }
+
+            if (dealer_sum > player_sum) {
+                continue;
+            } else if (dealer_sum < player_sum) {
+                bankroll += 2 * pot[i];
+                continue;
+            } else {
+                bankroll += pot[i];
+                continue;
+            }
+        }
+
     }
 
     /**
