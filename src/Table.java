@@ -137,7 +137,9 @@ public class Table {
         if(rounded_count <= 1.0){bet = table_min;}
         if(rounded_count == 2.0){bet = (1.0/3.0) * max_bet;}
         if(rounded_count == 3.0){bet = (2.0/3.0) * max_bet;}
-        if(rounded_count >= 4.0){bet = max_bet;}
+        if(rounded_count >= 4.0){
+            bet = max_bet;
+        }
 
         bankroll -= bet;
         pot[0] = bet;
