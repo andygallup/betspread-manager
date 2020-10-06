@@ -110,11 +110,12 @@ public class Table {
     /**
     * Calculates true count based on running count and decks_remaining
      *
+     *
      * Returns:
      *  Rounded (floored) true count (int)
     */
     public double calculate_true_count(){
-        return (double)(running_count)/((double)(deck.size())/52.0);
+        return (double)(running_count)/(((double)(deck.size())/52.0) + ((Math.random() * 1.0) - 0.5));
     }
 
     /**
@@ -133,10 +134,10 @@ public class Table {
         double bet = 0.0;
 
         // determine our bet based on the count
-        if(rounded_count <= 1){bet = table_min;}
-        if(rounded_count == 2){bet = (1.0/3.0) * max_bet;}
-        if(rounded_count == 3){bet = (2.0/3.0) * max_bet;}
-        if(rounded_count >= 4){bet = max_bet;}
+        if(rounded_count <= 1.0){bet = table_min;}
+        if(rounded_count == 2.0){bet = (1.0/3.0) * max_bet;}
+        if(rounded_count == 3.0){bet = (2.0/3.0) * max_bet;}
+        if(rounded_count >= 4.0){bet = max_bet;}
 
         bankroll -= bet;
         pot[0] = bet;
@@ -210,10 +211,6 @@ public class Table {
         // Add the hidden dealer card to the count
         add_card_to_count(cardb);
 
-        if (dealer_hand.contains(1) && dealer_hand.contains(10)) {
-            return;
-        }
-
         boolean isSoft = (carda == 1) || (cardb == 1);
 
         if (!isSoft) {
@@ -258,12 +255,22 @@ public class Table {
         // If player should buy insurance
         if (dealer_hand.get(0) == 1 && calculate_true_count() >= 3) {
             insurance = true;
-            bankroll -= pot[0]/2.0;
-            if(check_for_dealer_blackjack()){
-                bankroll += pot[0] * (3.0/2.0);
-                return true;
-            }
+            //insurance costs 1/2 of your original bet
+            bankroll -= pot[0] / 2.0;
         }
+        // check for dealer blackjack
+        if(check_for_blackjack(dealer_hand)){
+            if(insurance){
+                //insurance pays 2:1
+                bankroll += pot[0] * (3.0/2.0);
+            }
+            if(check_for_blackjack(player_hands.get(0))){
+                //if player has blackjack, push
+                bankroll += pot[0];
+            }
+            return true;
+        }
+
         // Otherwise, iterate through the player hands and play them
         for(int i = 0; i < 4; i++){
             List<Integer> hand = player_hands.get(i);
@@ -273,8 +280,8 @@ public class Table {
         return false;
     }
 
-    private boolean check_for_dealer_blackjack(){
-        return dealer_hand.contains(1) && dealer_hand.contains(10) && dealer_hand.size() == 2;
+    private boolean check_for_blackjack(List<Integer> hand){
+        return hand.contains(1) && hand.contains(10) && hand.size() == 2;
     }
 
     /**
@@ -489,6 +496,8 @@ public class Table {
     private boolean should_surrender(List<Integer> hand){
         // can only surrender 2 card hands (TODO: allow late surrender?)
         if (hand.size() > 2) {return false;}
+        if (!player_hands.get(1).isEmpty()) {return false;}
+
         // Soft total
         if (hand.contains(1) && sum_hand(hand) < 12){
             return false;
@@ -511,7 +520,7 @@ public class Table {
             return true;
         }
         if (sum == 15){
-            if (dealer == 10 && count > 0){
+            if (dealer == 10 && count >= 0){
                 return true;
             }
             if (dealer == 1 && (hit_on_soft || count >= 1)){
@@ -651,6 +660,10 @@ public class Table {
 
             if (dealer_sum > 21) {
                 bankroll += 2 * pot[i];
+                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
+                    number_of_blackjacks++;
+                    bankroll += 0.5 * pot[i];
+                }
                 continue;
             }
             if (dealer_sum < 12 && dealer_hand.contains(1)) {
@@ -661,14 +674,12 @@ public class Table {
                 continue;
             } else if (dealer_sum < player_sum) {
                 bankroll += 2 * pot[i];
-                if (player_sum == 21 && hand.size() == 2){
+                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
                     number_of_blackjacks++;
                     bankroll += 0.5 * pot[i];
                 }
-                continue;
             } else {
                 bankroll += pot[i];
-                continue;
             }
         }
     }
@@ -685,8 +696,8 @@ public class Table {
      */
     public Stats play_target_hours(double target_hours){
         double hours_played = 0.0;
-        //while(hours_played < target_hours && bankroll > 0.0){
-        while(hands_played < 1000000 && bankroll > 0.0){
+        while(hours_played < target_hours && bankroll > 0.0){
+        //while(hands_played < 10000 && bankroll > 0.0){
             //THE BIG LOOP
             if (deck_needs_shuffle()){
                 shuffle();
@@ -696,8 +707,8 @@ public class Table {
 
             deal_cards();
 
-            boolean insurance_paid = make_player_decision();
-            if(!insurance_paid) {
+            boolean dealer_blackjack = make_player_decision();
+            if(!dealer_blackjack) {
                 make_dealer_decision();
 
                 pay_out();
