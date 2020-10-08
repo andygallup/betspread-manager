@@ -50,6 +50,9 @@ class TableTest {
         hand.add(cardb);
     }
 
+    /**
+     * basic test to test the test functionality. test.
+     */
     @Test
     void one_plus_one() {
         assertEquals(1, 1);
