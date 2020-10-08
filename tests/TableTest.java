@@ -17,7 +17,7 @@ class TableTest {
     }
 
     @Test
-    void make_dealer_decision() {
+    void one_plus_one() {
         assertEquals(1, 1);
     }
 }
