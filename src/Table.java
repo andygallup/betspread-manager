@@ -26,7 +26,6 @@ public class Table {
     private double bankroll;
     private int running_count;
     private double[] pot;
-    private boolean insurance;
     private List<Integer> deck;
     private List<Integer> dealer_hand;
     private List<ArrayList<Integer>> player_hands;
@@ -56,7 +55,6 @@ public class Table {
         this.deck = new ArrayList<Integer>();
         this.dealer_hand = new ArrayList<Integer>();
         this.player_hands = new ArrayList<ArrayList<Integer>>();
-        this.insurance = false;
         for (int i = 0; i < 4; i++){
             player_hands.add(new ArrayList<Integer>());
         }
@@ -246,15 +244,12 @@ public class Table {
     }
 
     /**
-     * Given the dealer and player hands, plays the game optimally
-     * Iterates until an end condition is reached (stand, double, bust or blackjack)
-     * Keeps track of running count, and constantly makes best decision as count changes
-     * returns True if the player bought insurance and the dealer had blackjack
+     * Takes care of insurance logic and takes care of dealer has blackjack case.
+     * returns True if the dealer has blackjack
      * returns False otherwise
      */
-    public boolean make_player_decision() {
-        // Make player decision
-        // If player should buy insurance
+    public boolean check_for_dealer_blackjack() {
+        boolean insurance = false;
         if (dealer_hand.get(0) == 1 && calculate_true_count() >= 3) {
             insurance = true;
             //insurance costs 1/2 of your original bet
@@ -272,14 +267,23 @@ public class Table {
             }
             return true;
         }
+        return false;
+    } 
 
-        // Otherwise, iterate through the player hands and play them
+    /**
+     * Given the dealer and player hands, plays the game optimally
+     * Iterates until an end condition is reached (stand, double, bust or blackjack)
+     * Keeps track of running count, and constantly makes best decision as count changes
+     * returns True if the player bought insurance and the dealer had blackjack
+     * returns False otherwise
+     */
+    public void make_player_decision() {
+        //iterate through the player hands and play them
         for(int i = 0; i < 4; i++){
             List<Integer> hand = player_hands.get(i);
             if (hand.isEmpty()) {break;}
             play_hand(hand, i);
         }
-        return false;
     }
 
     private boolean check_for_blackjack(List<Integer> hand){
@@ -698,8 +702,8 @@ public class Table {
      */
     public Stats play_target_hours(double target_hours){
         double hours_played = 0.0;
+        //while (hours_played < target_hours) {
         while(hours_played < target_hours && bankroll > 0.0){
-        //while(hands_played < 10000 && bankroll > 0.0){
             //THE BIG LOOP
             if (deck_needs_shuffle()){
                 shuffle();
@@ -709,8 +713,9 @@ public class Table {
 
             deal_cards();
 
-            boolean dealer_blackjack = make_player_decision();
-            if(!dealer_blackjack) {
+            if (!check_for_dealer_blackjack()) {
+                make_player_decision();
+
                 make_dealer_decision();
 
                 pay_out();

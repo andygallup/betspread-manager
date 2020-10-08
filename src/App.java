@@ -60,7 +60,7 @@ public class App{
             stats_list.add(stats);
             //System.out.print(stats.toString());
             num_runs++;
-            System.out.println("loop: " + num_runs);
+            //System.out.println("loop: " + num_runs);
         }
 
         for(int i = 0; i < run_count; i++){
@@ -70,7 +70,7 @@ public class App{
                 broke_run_count++;
             }
             else{
-                System.out.println(stats_list.get(i).get_final_bankroll());
+                //System.out.println(stats_list.get(i).get_final_bankroll());
             }
         }
         avg_bankroll_delta = avg_bankroll_delta/(double)run_count;
