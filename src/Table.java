@@ -113,7 +113,7 @@ public class Table {
      *  Rounded (floored) true count (int)
     */
     public double calculate_true_count(){
-        return (double)(running_count)/(((double)(deck.size())/52.0) + ((Math.random() * 1.0) - 0.5));
+        return (double)(running_count)/((double)(deck.size())/52.0);
     }
 
     /**
@@ -214,9 +214,9 @@ public class Table {
         boolean isSoft = (carda == 1) || (cardb == 1);
 
         if (!isSoft) {
-            while (sum_hand(dealer_hand) < 17) {                // 2, 2
-                int card = add_card_to_hand(dealer_hand);       // 2, 2, 1
-                if (card == 1 && sum_hand(dealer_hand) < 12) {  //
+            while (sum_hand(dealer_hand) < 17) {
+                int card = add_card_to_hand(dealer_hand);
+                if (card == 1 && sum_hand(dealer_hand) < 12) {
                     isSoft = true;
                     break;
                 }
@@ -335,7 +335,7 @@ public class Table {
      * @param hand
      * @return
      */
-    private boolean should_split(List<Integer> hand){
+    public boolean should_split(List<Integer> hand){
         if (!player_hands.get(3).isEmpty()) {return false;}
         if (hand.size() != 2) {return false;}
 
@@ -378,7 +378,12 @@ public class Table {
             return true;
         }
         if(carda == 9) {
-            return dealer != 7 || dealer != 10 || dealer != 1;
+            if(dealer == 7 || dealer == 10 || dealer == 1){
+                return false;
+            }
+            else{
+                return true;
+            }
         }
         if(carda == 10) {return false;}
         return false;
@@ -416,7 +421,7 @@ public class Table {
      * @return boolean
      * Returns true if player should double, false if otherwise
      */
-    private boolean should_double(List<Integer> hand) {
+    public boolean should_double(List<Integer> hand) {
         // can only double initial (two card) hands
         if (hand.size() > 2){
             return false;
@@ -499,7 +504,7 @@ public class Table {
      * @param hand
      * @return
      */
-    private boolean should_surrender(List<Integer> hand){
+    public boolean should_surrender(List<Integer> hand){
         // can only surrender 2 card hands (TODO: allow late surrender?)
         if (hand.size() > 2) {return false;}
         if (!player_hands.get(1).isEmpty()) {return false;}
@@ -558,7 +563,7 @@ public class Table {
      * @param hand
      * @return
      */
-    private boolean should_hit(List<Integer> hand){
+    public boolean should_hit(List<Integer> hand){
         int sum = sum_hand(hand);
         int dealer = dealer_hand.get(0);
         double count = calculate_true_count();
@@ -574,15 +579,37 @@ public class Table {
             return false;
         }
         //Hard totals
-        if(sum < 12){return true;}
+        if(sum < 12) {return true;}
         if(sum == 12){
-            if(count >= 3 && (dealer > 6 || dealer == 1)) {return true;}
-            if(count >= 2 && (dealer > 6 || dealer < 3)) {return true;}
-            if(count >= 0 && (dealer > 6 || dealer < 4)) {return true;}
-            if(count <= 0 && (dealer > 6 || dealer < 5)) {return true;}
-            if(count <= -1 && dealer != 5) {return true;}
-            if(count <= -2) {return true;}
-            return false;
+            //Stand 12 into 2 at count >= 3 otherwise hit
+            if(dealer == 2) {
+                if (count >= 3) {return false;}
+                else{return true;}
+            }
+            //Stand 12 into 3 at count >= 2 otherwise hit
+            else if(dealer == 3) {
+                if(count >= 2) {return false;}
+                else{return true;}
+            }
+            //Hit 12 into 4 if count < 0 otherwise stand
+            else if(dealer == 4){
+                if(count < 0){return true;}
+                else{return false;}
+            }
+            //Hit 12 into 5 if count <= -2 otherwise stand
+            else if(dealer == 5){
+                if(count <= -2){return true;}
+                else{return false;}
+            }
+            //Hit 12 into 6 if count <= -1 otherwise stand
+            else if(dealer == 6){
+                if(count <= -1){return true;}
+                else{return false;}
+            }
+            //Always hit 12 on dealer 7 and higher
+            else{
+                return true;
+            }
         }
         if(sum == 13 || sum == 14){
             if(dealer > 6 || dealer == 1) {return true;}
@@ -594,7 +621,7 @@ public class Table {
             return false;
         }
         if(sum == 16){
-            if(count > 0 && dealer == 10) {return false;}
+            if(count >= 0 && dealer == 10) {return false;}
             if(count >= 5 && dealer == 9) {return false;}
             if(dealer > 6 || dealer == 1) {return true;}
             return false;
@@ -725,4 +752,35 @@ public class Table {
         }
         return get_stats(hours_played);
     }
+
+    //region Getters and setters for tests
+
+    public int get_running_count() {
+        return running_count;
+    }
+
+    public boolean is_hit_on_soft() {
+        return hit_on_soft;
+    }
+
+    public ArrayList<ArrayList<Integer>> get_player_hand() {
+        return (ArrayList<ArrayList<Integer>>) player_hands;
+    }
+
+    public List<Integer> get_dealer_hand() {
+        return dealer_hand;
+    }
+
+    public void set_running_count(int count) {
+        this.running_count = count;
+    }
+
+    public void set_player_hands(ArrayList<ArrayList<Integer>> hands){
+        this.player_hands = hands;
+    }
+
+    public void set_dealer_hand(List<Integer> hand){
+        this.dealer_hand = hand;
+    }
+    //endregion
 }
