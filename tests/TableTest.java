@@ -44,7 +44,7 @@ class TableTest {
      * @param carda
      * @param cardb
      */
-    void set_hand(List hand, int carda, int cardb) {
+    void set_hand(List<Integer> hand, int carda, int cardb) {
         hand.clear();
         hand.add(carda);
         hand.add(cardb);
