@@ -26,6 +26,7 @@ public class Table {
     private double bankroll;
     private int running_count;
     private double[] pot;
+    private double insurance_pot;
     private List<Integer> deck;
     private List<Integer> dealer_hand;
     private List<ArrayList<Integer>> player_hands;
@@ -59,6 +60,7 @@ public class Table {
             player_hands.add(new ArrayList<Integer>());
         }
         this.pot = new double[4];
+        this.insurance_pot = 0.0;
 
         shuffle();
     }
@@ -197,6 +199,15 @@ public class Table {
     }
 
     /**
+     * returns whether or not the hand is soft
+     * @param hand
+     * @return
+     */
+    private boolean is_soft(List<Integer> hand){
+        return (sum_hand(hand) < 12 && hand.contains(1));
+    }
+
+    /**
      * sums the hand, assuming A = 1.
      */
     private int sum_hand(List<Integer> hand) {
@@ -205,6 +216,21 @@ public class Table {
             total += i;
         }
         return total;
+    }
+
+    /**
+     * returns the value of the hand, incorporating softness
+     * @param hand
+     * @return
+     */
+    private int intelligent_sum(List<Integer> hand){
+        int dumb_sum = sum_hand(hand);
+        if(is_soft(hand)){
+            return dumb_sum + 10;
+        }
+        else{
+            return dumb_sum;
+        }
     }
 
     /**
@@ -432,7 +458,7 @@ public class Table {
             return false;
         }
         // Soft total
-        if (hand.contains(1) && sum_hand(hand) < 12){
+        if (is_soft(hand)){
             int sum = sum_hand(hand) + 10;
             int dealer = dealer_hand.get(0);
             if ((sum == 13 || sum == 14) && (dealer == 5 || dealer == 6)){
@@ -515,7 +541,7 @@ public class Table {
         if (!player_hands.get(1).isEmpty()) {return false;}
 
         // Soft total
-        if (hand.contains(1) && sum_hand(hand) < 12){
+        if (is_soft(hand)){
             return false;
         }
         int dealer = dealer_hand.get(0);
@@ -574,7 +600,7 @@ public class Table {
         double count = calculate_true_count();
 
         //Soft totals
-        if(hand.contains(1) && sum < 12){
+        if(is_soft(hand)){
             if(sum < 8){
                 return true;
             }
@@ -636,26 +662,6 @@ public class Table {
     }
 
     /**
-     * Resets the table status.
-     * Convenience method to avoid creating new table instances for every loop in App.java
-     */
-    public void reset(){
-        bankroll = original_bankroll;
-        running_count = 0;
-        deck.clear();
-        dealer_hand.clear();
-        for (int i = 0; i < 4; i++){
-            player_hands.get(i).clear();
-        }
-        // Clear the pots
-        for (int i = 0; i < player_hands.size(); i++) {
-            pot[i] = 0.0;
-        }
-
-        shuffle();
-    }
-
-    /**
      * Generates a Stats object from the table state
      * @return
      */
@@ -677,57 +683,69 @@ public class Table {
         return stats;
     }
 
+    private boolean conditionally_buy_insurance(){
+        double count = calculate_true_count();
+        if(dealer_hand.get(0) == 1 && count >= 3){
+            double insurance_money = pot[0]/2;
+            bankroll -= insurance_money;
+            insurance_pot = insurance_money;
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+
     /**
      * Compares Player hand(s) to Dealer and pays winning: losses were already subtracted.
      */
-    public void pay_out() {
-        for (int i = 0; i < player_hands.size(); i++) {
-            List<Integer> hand = player_hands.get(i);
-            if (hand.isEmpty()) {
-                continue;
-            }
-            int player_sum = sum_hand(hand);
+    public void pay_out(boolean dealer_has_blackjack, boolean player_has_blackjack, boolean bought_insurance) {
+         // Handle insurance payout
+         if(dealer_has_blackjack && bought_insurance){
+            pay_out_insurance(); // uses insurance pot
+         }
 
-            if (player_sum > 21) {
-                continue;
-            }
-            if (player_sum < 12 && hand.contains(1)) {
-                player_sum += 10;
-            }
-            int dealer_sum = sum_hand(dealer_hand);
+         // Handle blackjack cases
+         if(dealer_has_blackjack && player_has_blackjack) {
+             bankroll += pot[0];
+             number_of_blackjacks++;
+         }
+         else if(dealer_has_blackjack) {/*do nothing*/}
+         else if(player_has_blackjack) {
+            bankroll += pot[0] * (5.0/2.0);
+            number_of_blackjacks++;
+         }
+         // Play the game with no blackjacks
+         else{
+             int dealer_value = intelligent_sum(dealer_hand);
+             for(List<Integer> hand : player_hands) {
+                 int player_value = intelligent_sum(hand);
+                 if (player_value > 21) {/*do nothing*/}
+                 else if (dealer_value > 21) {
+                     bankroll += pot[0] * 2.0;
+                 }
+                 else if (player_value > dealer_value) {
+                     bankroll += pot[0] * 2.0;
+                 }
+                 else if (player_value < dealer_value) {/*do nothing*/}
+                 else if (player_value == dealer_value) {
+                     bankroll += pot[0];
+                 }
+                 else {
+                     throw new RuntimeException("Player didn't win lose or push, reached null case of pay_out()");
+                 }
+             }
+         }
 
-            if (dealer_sum > 21) {
-                bankroll += 2 * pot[i];
-                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
-                    number_of_blackjacks++;
-                    bankroll += 0.5 * pot[i];
-                }
-                continue;
-            }
-            if (dealer_sum < 12 && dealer_hand.contains(1)) {
-                dealer_sum += 10;
-            }
-
-            if (dealer_sum > player_sum) {
-                continue;
-            }
-            else if (dealer_sum < player_sum) {
-                bankroll += 2 * pot[i];
-                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
-                    number_of_blackjacks++;
-                    bankroll += 0.5 * pot[i];
-                }
-            }
-            else if (dealer_sum == player_sum){
-                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
-                    number_of_blackjacks++;
-                    bankroll += 2.5 * pot[i];
-                }
-                else {
-                    bankroll += pot[i];
-                }
-            }
+        insurance_pot = 0.0;
+        for (int i = 0; i < pot.length; i++) {
+            pot[i] = 0.0;
         }
+    }
+
+    private void pay_out_insurance(){
+        bankroll += insurance_pot * 3;
+        insurance_pot = 0.0;
     }
 
     /**
@@ -753,13 +771,24 @@ public class Table {
 
             deal_cards();
 
-            if (!check_for_dealer_blackjack()) {
+            //Conditionally buy insurance
+            boolean bought_insurance = conditionally_buy_insurance();
+
+            //check for player blackjack
+            boolean player_has_blackjack = check_for_blackjack(player_hands.get(0));
+
+            //Check Dealer blackjack
+            boolean dealer_has_blackjack = check_for_blackjack(dealer_hand);
+
+            //Play blackjack where no one has blackjack
+            if(!player_has_blackjack && !dealer_has_blackjack){
                 make_player_decision();
-
                 make_dealer_decision();
-
-                pay_out();
             }
+
+            //Pay out
+            pay_out(player_has_blackjack, dealer_has_blackjack, bought_insurance);
+
             hours_played += 1/(double)hands_per_hr;
             hands_played++;
         }
