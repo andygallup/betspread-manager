@@ -113,6 +113,11 @@ public class Table {
      *  Rounded (floored) true count (int)
     */
     public double calculate_true_count(){
+        //return 0;
+        return (double)(running_count)/((double)(deck.size())/52.0);
+    }
+
+    public double calculate_bet_true_count(){
         return (double)(running_count)/((double)(deck.size())/52.0);
     }
 
@@ -297,18 +302,18 @@ public class Table {
         //play the hand
         boolean keep_playing = true;
         while(keep_playing){
-            // HANDLE ALL SPLITS
-            if(should_split(hand)){
-                split(hand, index);
-                number_of_splits++;
-                continue;
-            }
-
             // HANDLE SURRENDER (assumes no late surrender)
             if(should_surrender(hand)){
                 surrender(index);
                 number_of_surrenders++;
                 return;
+            }
+
+            // HANDLE ALL SPLITS
+            if(should_split(hand)){
+                split(hand, index);
+                number_of_splits++;
+                continue;
             }
 
             // HANDLE ALL DOUBLES
@@ -705,14 +710,22 @@ public class Table {
 
             if (dealer_sum > player_sum) {
                 continue;
-            } else if (dealer_sum < player_sum) {
+            }
+            else if (dealer_sum < player_sum) {
                 bankroll += 2 * pot[i];
                 if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
                     number_of_blackjacks++;
                     bankroll += 0.5 * pot[i];
                 }
-            } else {
-                bankroll += pot[i];
+            }
+            else if (dealer_sum == player_sum){
+                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
+                    number_of_blackjacks++;
+                    bankroll += 2.5 * pot[i];
+                }
+                else {
+                    bankroll += pot[i];
+                }
             }
         }
     }
