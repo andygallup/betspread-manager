@@ -21,6 +21,7 @@ public class App{
         double original_bankroll;
         double target_hours;
         int run_count;
+        boolean counting;
 
         //parse args if necessary
         if(args.length > 0){
@@ -34,19 +35,23 @@ public class App{
             original_bankroll = Double.parseDouble(args[6]);
             target_hours = Double.parseDouble(args[7]);
             run_count = Integer.parseInt(args[8]);
+            if(args[9] == "true"){counting = true;}
+            else{counting = false;}
         }
         //otherwise use default values
         else{
-            table_min = 25;
+            table_min = 15;
             spread = 12;
-            hands_per_hr = 100;
+            hands_per_hr = 60;
             shoe_size = 6;
             penetration = 0.75;
             hit_on_soft = false;
-            original_bankroll = 5000;
-            target_hours = 1000;
+            original_bankroll = 9000;
+            target_hours = 200;
             run_count = 1000;
+            counting = true;
         }
+
         int num_runs = 0;
         List<Stats> stats_list = new ArrayList<Stats>();
         double avg_bankroll_delta = 0.0;
@@ -55,7 +60,7 @@ public class App{
         double ror = 0.0;
 
         while(num_runs < run_count) {
-            Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll);
+            Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting);
             Stats stats = table.play_target_hours(target_hours);
             stats_list.add(stats);
             //System.out.print(stats.toString());

@@ -29,6 +29,7 @@ public class Table {
     private List<Integer> deck;
     private List<Integer> dealer_hand;
     private List<ArrayList<Integer>> player_hands;
+    private boolean counting;
 
     //Stat trackers
     private double biggest_win;
@@ -42,7 +43,7 @@ public class Table {
     private double total_bet_amount;
     private int number_of_blackjacks;
 
-    public Table(int table_min, int spread, int hands_per_hr, int shoe_size, double penetration, boolean hit_on_soft, double original_bankroll) {
+    public Table(int table_min, int spread, int hands_per_hr, int shoe_size, double penetration, boolean hit_on_soft, double original_bankroll, boolean counting) {
         this.table_min = table_min;
         this.spread = spread;
         this.hands_per_hr = hands_per_hr;
@@ -52,6 +53,7 @@ public class Table {
         this.bankroll = original_bankroll;
         this.original_bankroll = original_bankroll;
         this.running_count = 0;
+        this.counting = counting;
         this.deck = new ArrayList<Integer>();
         this.dealer_hand = new ArrayList<Integer>();
         this.player_hands = new ArrayList<ArrayList<Integer>>();
@@ -102,7 +104,7 @@ public class Table {
         //if deck_penetration percentage of cards have been dealt, return true, else false
         double max_deck_size = 52*(double)shoe_size;
         double percentage_of_cards_left_in_deck = (double)(deck.size())/max_deck_size;
-        return (percentage_of_cards_left_in_deck <= penetration);
+        return (percentage_of_cards_left_in_deck <= (1 - penetration));
     }
 
     /**
@@ -113,8 +115,10 @@ public class Table {
      *  Rounded (floored) true count (int)
     */
     public double calculate_true_count(){
-        //return 0;
-        return (double)(running_count)/((double)(deck.size())/52.0);
+        if(counting){
+            return (double)(running_count)/((double)(deck.size())/52.0);
+        }
+        else {return 0;}
     }
 
     public double calculate_bet_true_count(){
