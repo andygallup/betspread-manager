@@ -37,13 +37,13 @@ public class App{
         }
         //otherwise use default values
         else{
-            table_min = 25;
+            table_min = 15;
             spread = 12;
             hands_per_hr = 100;
             shoe_size = 6;
             penetration = 0.75;
             hit_on_soft = false;
-            original_bankroll = 5000;
+            original_bankroll = 15000;
             target_hours = 1000;
             run_count = 1000;
         }
@@ -51,6 +51,7 @@ public class App{
         List<Stats> stats_list = new ArrayList<Stats>();
         double avg_bankroll_delta = 0.0;
         double hours_played = 0.0;
+        double avg_hours_played = 0.0;
         double broke_run_count = 0.0;
         double ror = 0.0;
 
@@ -74,9 +75,10 @@ public class App{
             }
         }
         avg_bankroll_delta = avg_bankroll_delta/(double)run_count;
+        avg_hours_played = hours_played/(double)run_count;
         ror = broke_run_count/(double)run_count;
 
-        double ev_per_hour = avg_bankroll_delta/(hours_played/(double)run_count);
+        double ev_per_hour = avg_bankroll_delta/(avg_hours_played);
 
         System.out.println("AVERAGE BANKROLL DELTA: " + avg_bankroll_delta);
         System.out.println("AVERAGE EV: " + ev_per_hour);
