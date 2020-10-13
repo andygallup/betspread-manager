@@ -40,13 +40,13 @@ public class App{
         }
         //otherwise use default values
         else{
-            table_min = 15;
+            table_min = 20;
             spread = 12;
             hands_per_hr = 60;
             shoe_size = 6;
             penetration = 0.75;
-            hit_on_soft = false;
-            original_bankroll = 9000;
+            hit_on_soft = true;
+            original_bankroll = 10000;
             target_hours = 200;
             run_count = 1000;
             counting = true;
@@ -57,6 +57,7 @@ public class App{
         double avg_bankroll_delta = 0.0;
         double hours_played = 0.0;
         double broke_run_count = 0.0;
+        double avg_bet_size = 0.0;
         double ror = 0.0;
 
         while(num_runs < run_count) {
@@ -71,6 +72,7 @@ public class App{
         for(int i = 0; i < run_count; i++){
             avg_bankroll_delta += stats_list.get(i).get_bankroll_delta();
             hours_played += stats_list.get(i).get_hours_played();
+            avg_bet_size += stats_list.get(i).get_avg_bet_size();
             if(stats_list.get(i).get_final_bankroll() <= 0.0){
                 broke_run_count++;
             }
@@ -80,12 +82,13 @@ public class App{
         }
         avg_bankroll_delta = avg_bankroll_delta/(double)run_count;
         ror = broke_run_count/(double)run_count;
-
+        avg_bet_size = avg_bet_size/(double)run_count;
         double ev_per_hour = avg_bankroll_delta/(hours_played/(double)run_count);
 
         System.out.println("AVERAGE BANKROLL DELTA: " + avg_bankroll_delta);
         System.out.println("AVERAGE EV: " + ev_per_hour);
         System.out.println("EV PER HAND: " + ev_per_hour/(double)hands_per_hr);
+        System.out.println("AVERAGE BET PER HAND: " + avg_bet_size);
         System.out.println("ROR: " + ror);
     }
 }
