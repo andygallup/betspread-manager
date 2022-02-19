@@ -72,10 +72,7 @@ public class Table {
         this.deck = new ArrayList<Integer>();
         this.dealer_hand = new ArrayList<Integer>();
         this.players = new ArrayList<ArrayList<ArrayList<Integer>>>();
-        players.add(new ArrayList<ArrayList<Integer>>());
-        for (int i = 0; i < 4; i++){
-            players.get(0).add(new ArrayList<Integer>());
-        }
+
 
         this.spread_array = spread_array;
         this.player_array = player_array;
@@ -85,6 +82,13 @@ public class Table {
         for (Integer i: player_array){
             if (i > max_players){
                 max_players = i;
+            }
+        }
+
+        for (int j = 0; j < max_players; j++){
+            players.add(new ArrayList<ArrayList<Integer>>());
+            for (int i = 0; i < 4; i++){
+                players.get(j).add(new ArrayList<Integer>());
             }
         }
 

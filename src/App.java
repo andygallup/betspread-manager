@@ -27,14 +27,14 @@ public class App{
         spread_array.add(1);
         spread_array.add(2);
         spread_array.add(4);
-        spread_array.add(4);
         spread_array.add(8);
+        spread_array.add(12);
         ArrayList<Integer> player_array = new ArrayList<Integer>();
         player_array.add(1);
         player_array.add(1);
         player_array.add(1);
-        player_array.add(4);
-        player_array.add(4);
+        player_array.add(1);
+        player_array.add(1);
 
         //parse args if necessary
         if(args.length > 0){
@@ -63,7 +63,7 @@ public class App{
             hit_on_soft = false;        //If dealer hits on an A6 (soft 17)
             original_bankroll = 20000;  //starting bankroll
             target_hours = 200;         //number of hours to play each table
-            run_count = 10000;          //number of times to play each table
+            run_count = 1000;          //number of times to play each table
             counting = true;            //whether or not to count
             big_small = false;           //whether we play the big/small strategy
         }
