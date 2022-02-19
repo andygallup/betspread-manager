@@ -22,6 +22,7 @@ public class App{
         double target_hours;
         int run_count;
         boolean counting;
+        boolean big_small;
 
         //parse args if necessary
         if(args.length > 0){
@@ -37,19 +38,22 @@ public class App{
             run_count = Integer.parseInt(args[8]);
             if(args[9] == "true"){counting = true;}
             else{counting = false;}
+            if(args[10] == "true"){big_small = true;}
+            else{big_small = false;}
         }
         //otherwise use default values
         else{
-            table_min = 20;
-            spread = 12;
-            hands_per_hr = 60;
-            shoe_size = 6;
-            penetration = 0.75;
-            hit_on_soft = true;
-            original_bankroll = 10000;
-            target_hours = 200;
-            run_count = 1000;
-            counting = true;
+            table_min = 25;             //table minimum bet
+            spread = 32;                //blackjack bet spread
+            hands_per_hr = 60;          //hands played per hour
+            shoe_size = 8;              //number of decks in the shoe
+            penetration = 0.75;         //how far the shoe is played before a shuffle
+            hit_on_soft = false;        //If dealer hits on an A6 (soft 17)
+            original_bankroll = 20000;  //starting bankroll
+            target_hours = 200;         //number of hours to play each table
+            run_count = 10000;          //number of times to play each table
+            counting = true;            //whether or not to count
+            big_small = true;           //whether we play the big/small strategy
         }
 
         int num_runs = 0;
@@ -61,7 +65,7 @@ public class App{
         double ror = 0.0;
 
         while(num_runs < run_count) {
-            Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting);
+            Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting, big_small);
             Stats stats = table.play_target_hours(target_hours);
             stats_list.add(stats);
             //System.out.print(stats.toString());

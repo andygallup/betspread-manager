@@ -44,7 +44,7 @@ public class Table {
     private double total_bet_amount;
     private int number_of_blackjacks;
 
-    public Table(int table_min, int spread, int hands_per_hr, int shoe_size, double penetration, boolean hit_on_soft, double original_bankroll, boolean counting) {
+    public Table(int table_min, int spread, int hands_per_hr, int shoe_size, double penetration, boolean hit_on_soft, double original_bankroll, boolean counting, boolean big_small) {
         this.table_min = table_min;
         this.spread = spread;
         this.hands_per_hr = hands_per_hr;
@@ -103,6 +103,7 @@ public class Table {
      */
     public boolean deck_needs_shuffle(){
         //if deck_penetration percentage of cards have been dealt, return true, else false
+        if(floor(calculate_true_count())<= -1){return true;}
         double max_deck_size = 52*(double)shoe_size;
         double percentage_of_cards_left_in_deck = (double)(deck.size())/max_deck_size;
         return (percentage_of_cards_left_in_deck <= (1 - penetration));
@@ -438,6 +439,7 @@ public class Table {
         }
         // Soft total
         if (hand.contains(1) && sum_hand(hand) < 12){
+            double count = calculate_true_count();
             int sum = sum_hand(hand) + 10;
             int dealer = dealer_hand.get(0);
             if ((sum == 13 || sum == 14) && (dealer == 5 || dealer == 6)){
@@ -446,7 +448,7 @@ public class Table {
             if ((sum == 15 || sum == 16) && (dealer == 4 || dealer == 5 || dealer == 6)){
                 return true;
             }
-            if ((sum == 17 || sum == 18) && (dealer == 3 || dealer == 4 || dealer == 5 || dealer == 6)){
+            if ((sum == 17 || sum == 18) && (dealer == 3 || dealer == 4 || dealer == 5 || dealer == 6)) {
                 return true;
             }
             if (sum == 18 && dealer == 2 && hit_on_soft) {
@@ -462,7 +464,7 @@ public class Table {
             int sum = sum_hand(hand);
             int dealer = dealer_hand.get(0);
             double count = calculate_true_count();
-
+            if (sum == 8 && dealer == 6 && count >= 2) {return true;}
             if (sum == 9){
                 if (dealer == 3 || dealer == 4 || dealer == 5 || dealer == 6){
                     return true;
@@ -470,7 +472,7 @@ public class Table {
                 if (dealer == 2 && count >= 1){
                     return true;
                 }
-                if (dealer == 7 && count >= 4){
+                if (dealer == 7 && count >= 3){
                     return true;
                 }
             }
@@ -479,7 +481,6 @@ public class Table {
                     return true;
                 }
                 if (count >= 4){
-                    //TODO: check with ben about doing this at TC3 in a H17 game
                     return true;
                 }
             }
@@ -544,7 +545,7 @@ public class Table {
             if (dealer == 10 && count >= 0){
                 return true;
             }
-            if (dealer == 1 && (hit_on_soft || count >= 1)){
+            if (dealer == 1 && (hit_on_soft || count >= 2)){ //TODO: Check at a count of 2
                 return true;
             }
             if (dealer == 9 && count >= 2){
@@ -594,34 +595,44 @@ public class Table {
             //Stand 12 into 2 at count >= 3 otherwise hit
             if(dealer == 2) {
                 if (count >= 3) {return false;}
-                else{return true;}
+                else {return true;}
             }
             //Stand 12 into 3 at count >= 2 otherwise hit
             else if(dealer == 3) {
                 if(count >= 2) {return false;}
-                else{return true;}
+                else {return true;}
             }
             //Hit 12 into 4 if count < 0 otherwise stand
             else if(dealer == 4){
                 if(count < 0){return true;}
-                else{return false;}
+                else {return false;}
             }
             //Hit 12 into 5 if count <= -2 otherwise stand
             else if(dealer == 5){
-                if(count <= -2){return true;}
-                else{return false;}
+                if(count <= -2) {return true;}
+                else {return false;}
             }
             //Hit 12 into 6 if count <= -1 otherwise stand
             else if(dealer == 6){
-                if(count <= -1){return true;}
-                else{return false;}
+                if(count <= -1) {return true;}
+                else {return false;}
             }
             //Always hit 12 on dealer 7 and higher
             else{
                 return true;
             }
         }
-        if(sum == 13 || sum == 14){
+        if(sum == 13) {
+            if (dealer == 2 && count < 0){
+                return true;
+            }
+            else if (dealer == 3 && count <= -2){
+                return true;
+            }
+            else if(dealer > 6 || dealer == 1) {return true;}
+            else {return false;}
+        }
+        if(sum == 14){
             if(dealer > 6 || dealer == 1) {return true;}
             return false;
         }
@@ -632,7 +643,7 @@ public class Table {
         }
         if(sum == 16){
             if(count >= 0 && dealer == 10) {return false;}
-            if(count >= 5 && dealer == 9) {return false;}
+            if(count >= 4 && dealer == 9) {return false;} //TODO: Check if count 5 (Ill 18) vs 4 (BJA)
             if(dealer > 6 || dealer == 1) {return true;}
             return false;
         }
@@ -754,16 +765,16 @@ public class Table {
                 shuffle();
             }
 
-            make_bet();
+            make_bet(); //REFACTOR TO BET FOR EACH PLAYER
 
-            deal_cards();
+            deal_cards(); //DEAL CARDS TO EACH PLAYER
 
             if (!check_for_dealer_blackjack()) {
-                make_player_decision();
+                make_player_decision(); //FOR EACH PLAYER
 
                 make_dealer_decision();
 
-                pay_out();
+                pay_out(); // FOPR EACH PLAEYR
             }
             hours_played += 1/(double)hands_per_hr;
             hands_played++;

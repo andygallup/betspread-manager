@@ -17,10 +17,11 @@ class TableTest {
     private boolean hit_on_soft = true;
     private double original_bankroll = 10000;
     private boolean counting = true;
+    private boolean big_small = true;
 
     @BeforeEach
     void setUp() {
-        Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting);
+        Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting, big_small);
         this.table = table;
     }
 
