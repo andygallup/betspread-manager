@@ -24,13 +24,16 @@ public class Table {
     private final double penetration;
     private final boolean hit_on_soft;
     private final double original_bankroll;
+    private final boolean big_small;
     private double bankroll;
     private int running_count;
     private double[] pot;
     private List<Integer> deck;
     private List<Integer> dealer_hand;
-    private List<ArrayList<Integer>> player_hands;
+    private ArrayList<ArrayList<ArrayList<Integer>>> players; // Hands, Splits, Cards, Individual card
     private boolean counting;
+    private List<Integer> spread_array;
+    private List<Integer> player_array;
 
     //Stat trackers
     private double biggest_win;
@@ -44,7 +47,17 @@ public class Table {
     private double total_bet_amount;
     private int number_of_blackjacks;
 
-    public Table(int table_min, int spread, int hands_per_hr, int shoe_size, double penetration, boolean hit_on_soft, double original_bankroll, boolean counting, boolean big_small) {
+    public Table(int table_min,
+                 int spread,
+                 int hands_per_hr,
+                 int shoe_size,
+                 double penetration,
+                 boolean hit_on_soft,
+                 double original_bankroll,
+                 boolean counting,
+                 boolean big_small,
+                 List<Integer> spread_array,
+                 List<Integer> player_array) {
         this.table_min = table_min;
         this.spread = spread;
         this.hands_per_hr = hands_per_hr;
@@ -53,15 +66,29 @@ public class Table {
         this.hit_on_soft = hit_on_soft;
         this.bankroll = original_bankroll;
         this.original_bankroll = original_bankroll;
+        this.big_small = big_small;
         this.running_count = 0;
         this.counting = counting;
         this.deck = new ArrayList<Integer>();
         this.dealer_hand = new ArrayList<Integer>();
-        this.player_hands = new ArrayList<ArrayList<Integer>>();
+        this.players = new ArrayList<ArrayList<ArrayList<Integer>>>();
+        players.add(new ArrayList<ArrayList<Integer>>());
         for (int i = 0; i < 4; i++){
-            player_hands.add(new ArrayList<Integer>());
+            players.get(0).add(new ArrayList<Integer>());
         }
-        this.pot = new double[4];
+
+        this.spread_array = spread_array;
+        this.player_array = player_array;
+
+        int max_players = 0;
+
+        for (Integer i: player_array){
+            if (i > max_players){
+                max_players = i;
+            }
+        }
+
+        this.pot = new double[4*max_players];
 
         shuffle();
     }
@@ -123,15 +150,11 @@ public class Table {
         else {return 0;}
     }
 
-    public double calculate_bet_true_count(){
-        return (double)(running_count)/((double)(deck.size())/52.0);
-    }
-
     /**
      * Adds money from the bankroll to the pot based on the true count and the
      * Assumes a 1-12 spread
      */
-    public void make_bet(){
+    public void make_bet() {
         // Clear the pots
         for (int i = 0; i < pot.length; i++) {
             pot[i] = 0.0;
@@ -139,20 +162,19 @@ public class Table {
 
         double count = calculate_true_count();
         double rounded_count = floor(count);
-        double max_bet = spread * table_min;
-        double bet = 0.0;
-
-        // determine our bet based on the count
-        if(rounded_count <= 1.0){bet = table_min;}
-        if(rounded_count == 2.0){bet = (1.0/3.0) * max_bet;}
-        if(rounded_count == 3.0){bet = (2.0/3.0) * max_bet;}
-        if(rounded_count >= 4.0){
-            bet = max_bet;
+        if(rounded_count > 4){
+            rounded_count = 4;
         }
 
-        bankroll -= bet;
-        pot[0] = bet;
-        total_bet_amount += bet;
+        int num_players = player_array.get((int)rounded_count);
+        int bet = spread_array.get((int)rounded_count);
+
+
+        for (int i = 0; i < num_players; i++){
+            pot[i*4] = bet;
+            total_bet_amount += bet;
+            bankroll -= bet;
+        }
     }
 
     /**
@@ -161,14 +183,20 @@ public class Table {
      */
     public void deal_cards(){
         //clear the hands
-        for (int i = 0; i < 4; i++){
-            player_hands.get(i).clear();
+        for (ArrayList<ArrayList<Integer>> player : players){
+            for (int i = 0; i < 4; i++){
+                player.get(i).clear();
+            }
         }
+
         dealer_hand.clear();
 
         //pop 4 cards off of deck, 2 to each hand
-        add_card_to_hand(player_hands.get(0));
-        add_card_to_hand(player_hands.get(0));
+        for (ArrayList<ArrayList<Integer>> player : players) {
+            add_card_to_hand(player.get(0));
+            add_card_to_hand(player.get(0));
+        }
+
         add_card_to_hand(dealer_hand);
 
         int fourth_card = deck.remove(deck.size()-1);
@@ -264,17 +292,23 @@ public class Table {
         if (dealer_hand.get(0) == 1 && calculate_true_count() >= 3) {
             insurance = true;
             //insurance costs 1/2 of your original bet
-            bankroll -= pot[0] / 2.0;
+            for (ArrayList<ArrayList<Integer>> player : players) {
+                bankroll -= pot[0] / 2.0;
+            }
         }
         // check for dealer blackjack
         if(check_for_blackjack(dealer_hand)){
             if(insurance){
                 //insurance pays 2:1
-                bankroll += pot[0] * (3.0/2.0);
+                for (ArrayList<ArrayList<Integer>> player : players) {
+                    bankroll += pot[0] * (3.0 / 2.0);
+                }
             }
-            if(check_for_blackjack(player_hands.get(0))){
-                //if player has blackjack, push
-                bankroll += pot[0];
+            for (ArrayList<ArrayList<Integer>> player : players) {
+                if(check_for_blackjack(player.get(0))){
+                    //if player has blackjack, push
+                    bankroll += pot[0];
+                }
             }
             return true;
         }
@@ -290,10 +324,14 @@ public class Table {
      */
     public void make_player_decision() {
         //iterate through the player hands and play them
-        for(int i = 0; i < 4; i++){
-            List<Integer> hand = player_hands.get(i);
-            if (hand.isEmpty()) {break;}
-            play_hand(hand, i);
+        for (int player = 0; player < players.size(); player++) {
+            for (int i = 0; i < 4; i++) {
+                List<Integer> hand = players.get(player).get(i);
+                if (hand.isEmpty()) {
+                    break;
+                }
+                play_hand(player, hand, i);
+            }
         }
     }
 
@@ -304,27 +342,27 @@ public class Table {
     /**
      * plays a single hand. If necessary, will add a player_hand and deal out the extra cards.
      */
-    public void play_hand(List<Integer> hand, int index){
+    public void play_hand(int player, List<Integer> hand, int index){
         //play the hand
         boolean keep_playing = true;
         while(keep_playing){
             // HANDLE SURRENDER (assumes no late surrender)
-            if(should_surrender(hand)){
-                surrender(index);
+            if(can_surrender(player) && should_surrender(hand)){
+                surrender(player, index);
                 number_of_surrenders++;
                 return;
             }
 
             // HANDLE ALL SPLITS
-            if(should_split(hand)){
-                split(hand, index);
+            if(can_split(player) && should_split(hand)){
+                split(player, hand, index);
                 number_of_splits++;
                 continue;
             }
 
             // HANDLE ALL DOUBLES
             if(should_double(hand)){
-                doubleHand(hand, index);
+                doubleHand(player, hand, index);
                 number_of_doubles++;
                 return;
             }
@@ -341,13 +379,16 @@ public class Table {
         }
     }
 
+    public boolean can_split(int player){
+        return players.get(player).get(3).isEmpty();
+    }
+
     /**
      * Returns true if the player should split, false otherwise
      * @param hand
      * @return
      */
     public boolean should_split(List<Integer> hand){
-        if (!player_hands.get(3).isEmpty()) {return false;}
         if (hand.size() != 2) {return false;}
 
         int carda = hand.get(0);
@@ -404,22 +445,22 @@ public class Table {
      * Splits the hand into two hands if allowed (max 3 splits)
      * @param hand
      */
-    private void split(List<Integer> hand, int index){
+    private void split(int player, List<Integer> hand, int index){
         //split if necessary
         for(int i = index + 1; i < 4; i++){
-            if (player_hands.get(i).isEmpty()){
+            if (players.get(player).get(i).isEmpty()){
                 // remove second card from first hand
                 int split_card = hand.remove(1);
                 // add second card to second hand
-                player_hands.get(i).add(split_card);
+                players.get(player).get(i).add(split_card);
                 // get a card from the deck to add to the first hand
                 add_card_to_hand(hand);
                 // get a card from the deck to add to the second hand
-                add_card_to_hand(player_hands.get(i));
+                add_card_to_hand(players.get(player).get(i));
                 // put more money in the pot for the second hand
-                bankroll -= pot[index];
-                pot[i] = pot[index];
-                total_bet_amount += pot[index];
+                bankroll -= pot[(player*4) + index];
+                pot[(player*4) + i] = pot[(player*4) + index];
+                total_bet_amount += pot[(player*4) + index];
                 hands_played++;
                 return;
             }
@@ -500,14 +541,18 @@ public class Table {
     /**
      * Adds a card to the hand and doubles the correct pot.
      */
-    private void doubleHand(List<Integer> hand, int index) {
+    private void doubleHand(int player, List<Integer> hand, int index) {
         add_card_to_hand(hand);
-        if (!(pot[index] > 0)) {
-            throw new RuntimeException("Trying to double an uninitiated hand, index: " + index);
+        if (pot[(player*4) + index] <= 0) {
+            throw new RuntimeException("Trying to double an uninitiated hand, index: " + (player*4) + index);
         }
-        bankroll -= pot[index];
-        total_bet_amount += pot[index];
-        pot[index] = pot[index] * 2;
+        bankroll -= pot[(player*4) + index];
+        total_bet_amount += pot[(player*4) + index];
+        pot[(player*4) + index] = pot[(player*4) + index] * 2;
+    }
+
+    public boolean can_surrender(int player){
+        return players.get(player).get(1).isEmpty();
     }
 
     /**
@@ -516,9 +561,8 @@ public class Table {
      * @return
      */
     public boolean should_surrender(List<Integer> hand){
-        // can only surrender 2 card hands (TODO: allow late surrender?)
+        // can only surrender 2 card hands
         if (hand.size() > 2) {return false;}
-        if (!player_hands.get(1).isEmpty()) {return false;}
 
         // Soft total
         if (hand.contains(1) && sum_hand(hand) < 12){
@@ -564,9 +608,9 @@ public class Table {
     /**
      * Makes hand disappear so that it isn't picked up by pay_out and returns half the pot.
      */
-    private void surrender(int index) {
-        player_hands.get(index).clear();
-        bankroll += pot[index] / 2;
+    private void surrender(int player, int index) {
+        players.get(player).get(index).clear();
+        bankroll += pot[(player*4) + index] / 2;
     }
 
     /**
@@ -660,12 +704,13 @@ public class Table {
         running_count = 0;
         deck.clear();
         dealer_hand.clear();
-        for (int i = 0; i < 4; i++){
-            player_hands.get(i).clear();
+        for (ArrayList<ArrayList<Integer>> player : players){
+            for (int i = 0; i < 4; i++){
+                player.get(i).clear();
+            }
         }
-        // Clear the pots
-        for (int i = 0; i < player_hands.size(); i++) {
-            pot[i] = 0.0;
+        for (int i = 0; i < pot.length; i++){
+            pot[i] = 0;
         }
 
         shuffle();
@@ -697,50 +742,49 @@ public class Table {
      * Compares Player hand(s) to Dealer and pays winning: losses were already subtracted.
      */
     public void pay_out() {
-        for (int i = 0; i < player_hands.size(); i++) {
-            List<Integer> hand = player_hands.get(i);
-            if (hand.isEmpty()) {
-                continue;
-            }
-            int player_sum = sum_hand(hand);
-
-            if (player_sum > 21) {
-                continue;
-            }
-            if (player_sum < 12 && hand.contains(1)) {
-                player_sum += 10;
-            }
-            int dealer_sum = sum_hand(dealer_hand);
-
-            if (dealer_sum > 21) {
-                bankroll += 2 * pot[i];
-                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
-                    number_of_blackjacks++;
-                    bankroll += 0.5 * pot[i];
+        for (int player = 0; player < players.size(); player++) {
+            for (int i = 0; i < players.get(player).size(); i++) {
+                List<Integer> hand = players.get(player).get(i);
+                if (hand.isEmpty()) {
+                    continue;
                 }
-                continue;
-            }
-            if (dealer_sum < 12 && dealer_hand.contains(1)) {
-                dealer_sum += 10;
-            }
+                int player_sum = sum_hand(hand);
 
-            if (dealer_sum > player_sum) {
-                continue;
-            }
-            else if (dealer_sum < player_sum) {
-                bankroll += 2 * pot[i];
-                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
-                    number_of_blackjacks++;
-                    bankroll += 0.5 * pot[i];
+                if (player_sum > 21) {
+                    continue;
                 }
-            }
-            else if (dealer_sum == player_sum){
-                if (player_sum == 21 && hand.size() == 2 && player_hands.get(1).isEmpty()){
-                    number_of_blackjacks++;
-                    bankroll += 2.5 * pot[i];
+                if (player_sum < 12 && hand.contains(1)) {
+                    player_sum += 10;
                 }
-                else {
-                    bankroll += pot[i];
+                int dealer_sum = sum_hand(dealer_hand);
+
+                if (dealer_sum > 21) {
+                    bankroll += 2 * pot[(player * 4) + i];
+                    if (player_sum == 21 && hand.size() == 2 && players.get(player).get(1).isEmpty()) {
+                        number_of_blackjacks++;
+                        bankroll += 0.5 * pot[(player * 4) + i];
+                    }
+                    continue;
+                }
+                if (dealer_sum < 12 && dealer_hand.contains(1)) {
+                    dealer_sum += 10;
+                }
+
+                if (dealer_sum > player_sum) {
+                    continue;
+                } else if (dealer_sum < player_sum) {
+                    bankroll += 2 * pot[(player * 4) + i];
+                    if (player_sum == 21 && hand.size() == 2 && players.get(player).get(1).isEmpty()) {
+                        number_of_blackjacks++;
+                        bankroll += 0.5 * pot[(player * 4) + i];
+                    }
+                } else if (dealer_sum == player_sum) {
+                    if (player_sum == 21 && hand.size() == 2 && players.get(player).get(1).isEmpty()) {
+                        number_of_blackjacks++;
+                        bankroll += 2.5 * pot[(player * 4) + i];
+                    } else {
+                        bankroll += pot[(player * 4) + i];
+                    }
                 }
             }
         }
@@ -792,10 +836,6 @@ public class Table {
         return hit_on_soft;
     }
 
-    public ArrayList<ArrayList<Integer>> get_player_hand() {
-        return (ArrayList<ArrayList<Integer>>) player_hands;
-    }
-
     public List<Integer> get_dealer_hand() {
         return dealer_hand;
     }
@@ -804,8 +844,11 @@ public class Table {
         this.running_count = count;
     }
 
-    public void set_player_hands(ArrayList<ArrayList<Integer>> hands){
-        this.player_hands = hands;
+    public void set_player_hands(int player, ArrayList<ArrayList<Integer>> hands){
+        this.players.get(player).clear();
+        for (ArrayList<Integer> hand : hands){
+            this.players.get(player).add(hand);
+        }
     }
 
     public void set_dealer_hand(List<Integer> hand){

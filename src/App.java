@@ -23,6 +23,18 @@ public class App{
         int run_count;
         boolean counting;
         boolean big_small;
+        ArrayList<Integer> spread_array = new ArrayList<Integer>();
+        spread_array.add(1);
+        spread_array.add(2);
+        spread_array.add(4);
+        spread_array.add(4);
+        spread_array.add(8);
+        ArrayList<Integer> player_array = new ArrayList<Integer>();
+        player_array.add(1);
+        player_array.add(1);
+        player_array.add(1);
+        player_array.add(4);
+        player_array.add(4);
 
         //parse args if necessary
         if(args.length > 0){
@@ -43,8 +55,8 @@ public class App{
         }
         //otherwise use default values
         else{
-            table_min = 25;             //table minimum bet
-            spread = 32;                //blackjack bet spread
+            table_min = 15;             //table minimum bet
+            spread = 12;                //blackjack bet spread
             hands_per_hr = 60;          //hands played per hour
             shoe_size = 8;              //number of decks in the shoe
             penetration = 0.75;         //how far the shoe is played before a shuffle
@@ -53,7 +65,7 @@ public class App{
             target_hours = 200;         //number of hours to play each table
             run_count = 10000;          //number of times to play each table
             counting = true;            //whether or not to count
-            big_small = true;           //whether we play the big/small strategy
+            big_small = false;           //whether we play the big/small strategy
         }
 
         int num_runs = 0;
@@ -65,7 +77,7 @@ public class App{
         double ror = 0.0;
 
         while(num_runs < run_count) {
-            Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting, big_small);
+            Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting, big_small, spread_array, player_array);
             Stats stats = table.play_target_hours(target_hours);
             stats_list.add(stats);
             //System.out.print(stats.toString());

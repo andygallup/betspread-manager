@@ -19,9 +19,22 @@ class TableTest {
     private boolean counting = true;
     private boolean big_small = true;
 
+
     @BeforeEach
     void setUp() {
-        Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting, big_small);
+        ArrayList<Integer> spread_array = new ArrayList<Integer>();
+        spread_array.add(1);
+        spread_array.add(2);
+        spread_array.add(4);
+        spread_array.add(16);
+        spread_array.add(32);
+        ArrayList<Integer> player_array = new ArrayList<Integer>();
+        player_array.add(1);
+        player_array.add(1);
+        player_array.add(1);
+        player_array.add(1);
+        player_array.add(1);
+        Table table = new Table(table_min, spread, hands_per_hr, shoe_size, penetration, hit_on_soft, original_bankroll, counting, big_small, spread_array, player_array);
         this.table = table;
     }
 
@@ -216,7 +229,7 @@ class TableTest {
                 else if (i == 3 || i == 4 || i == 5 || i == 6) {
                     assertTrue(table.should_double(player_hand));
                 }
-                else if (i == 7 && count >= 4){
+                else if (i == 7 && count >= 3){
                     assertTrue(table.should_double(player_hand));
                 }
                 else {
@@ -406,7 +419,7 @@ class TableTest {
         assertFalse(table.should_split(player_hand));
 
         //TEST THAT YOU CAN'T SURRENDER A SPLIT HAND
-        table.set_player_hands(multiple_hands);
+        table.set_player_hands(0, multiple_hands);
         assertFalse(table.should_surrender(multiple_hands.get(0)));
         assertFalse(table.should_surrender(multiple_hands.get(1)));
 
@@ -416,7 +429,7 @@ class TableTest {
         }
 
         //CLEAR PLAYER HANDS
-        table.set_player_hands(clear_hands);
+        table.set_player_hands(0, clear_hands);
 
         //TEST PLAYER HARD <12
         for(int second_card = 2; second_card < 11; second_card++){
@@ -602,7 +615,15 @@ class TableTest {
                     table.set_dealer_hand(dealer_hand);
                     // Stand on dealer 6 and lower, otherwise hit
                     if (i < 7 && i != 1) {
-                        assertFalse(table.should_hit(player_hand));
+                        if (count < 0 && i == 2 && first_card == 3){
+                            assertTrue(table.should_hit(player_hand));
+                        }
+                        else if (count <= -2 && i == 3 && first_card == 3){
+                            assertTrue(table.should_hit(player_hand));
+                        }
+                        else {
+                            assertFalse(table.should_hit(player_hand));
+                        }
                     }
                     // Stand on 16 into 10 at counts 0 and lower
                     else if (first_card == 6 && i == 10){
