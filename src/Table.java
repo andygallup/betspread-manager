@@ -34,6 +34,7 @@ public class Table {
     private boolean counting;
     private List<Integer> spread_array;
     private List<Integer> player_array;
+    private int num_players;
 
     //Stat trackers
     private double biggest_win;
@@ -72,6 +73,7 @@ public class Table {
         this.deck = new ArrayList<Integer>();
         this.dealer_hand = new ArrayList<Integer>();
         this.players = new ArrayList<ArrayList<ArrayList<Integer>>>();
+        this.num_players = 1;
 
 
         this.spread_array = spread_array;
@@ -170,9 +172,8 @@ public class Table {
             rounded_count = 4;
         }
 
-        int num_players = player_array.get((int)rounded_count);
-        int bet = spread_array.get((int)rounded_count);
-
+        num_players = player_array.get((int)rounded_count);
+        int bet = table_min * spread_array.get((int)rounded_count);
 
         for (int i = 0; i < num_players; i++){
             pot[i*4] = bet;
@@ -328,7 +329,7 @@ public class Table {
      */
     public void make_player_decision() {
         //iterate through the player hands and play them
-        for (int player = 0; player < players.size(); player++) {
+        for (int player = 0; player < num_players; player++) {
             for (int i = 0; i < 4; i++) {
                 List<Integer> hand = players.get(player).get(i);
                 if (hand.isEmpty()) {
@@ -469,6 +470,7 @@ public class Table {
                 return;
             }
         }
+        throw new RuntimeException("trying to split?");
     }
 
     /**
@@ -548,7 +550,7 @@ public class Table {
     private void doubleHand(int player, List<Integer> hand, int index) {
         add_card_to_hand(hand);
         if (pot[(player*4) + index] <= 0) {
-            throw new RuntimeException("Trying to double an uninitiated hand, index: " + (player*4) + index);
+            throw new RuntimeException("Trying to double an uninitialized hand, index: " + index + "\n Player:" + player);
         }
         bankroll -= pot[(player*4) + index];
         total_bet_amount += pot[(player*4) + index];
@@ -746,7 +748,7 @@ public class Table {
      * Compares Player hand(s) to Dealer and pays winning: losses were already subtracted.
      */
     public void pay_out() {
-        for (int player = 0; player < players.size(); player++) {
+        for (int player = 0; player < num_players; player++) {
             for (int i = 0; i < players.get(player).size(); i++) {
                 List<Integer> hand = players.get(player).get(i);
                 if (hand.isEmpty()) {

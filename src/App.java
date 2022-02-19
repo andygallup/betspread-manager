@@ -23,18 +23,32 @@ public class App{
         int run_count;
         boolean counting;
         boolean big_small;
+        /*
+        Spread_array + player_array represent the betting units PER HAND being bet assuming the player
+        players player_array spots at each count. For example:
+
+        spread_array = [1, 2, 4, 4, 8]
+        player_array = [1, 1, 1, 2, 2]
+
+        Represents a game where:
+        TC 0 -> 1 spot at 1 unit
+        TC 1 -> 1 spot at 2 units
+        TC 2 -> 1 spot at 4 units
+        TC 3 -> 2 spots at 4 units
+        TC 4 -> 4 spots at 8 units
+         */
         ArrayList<Integer> spread_array = new ArrayList<Integer>();
         spread_array.add(1);
         spread_array.add(2);
         spread_array.add(4);
+        spread_array.add(4);
         spread_array.add(8);
-        spread_array.add(12);
         ArrayList<Integer> player_array = new ArrayList<Integer>();
         player_array.add(1);
         player_array.add(1);
         player_array.add(1);
-        player_array.add(1);
-        player_array.add(1);
+        player_array.add(2);
+        player_array.add(2);
 
         //parse args if necessary
         if(args.length > 0){
@@ -55,17 +69,17 @@ public class App{
         }
         //otherwise use default values
         else{
-            table_min = 15;             //table minimum bet
+            table_min = 25;             //table minimum bet
             spread = 12;                //blackjack bet spread
             hands_per_hr = 60;          //hands played per hour
             shoe_size = 8;              //number of decks in the shoe
             penetration = 0.75;         //how far the shoe is played before a shuffle
             hit_on_soft = false;        //If dealer hits on an A6 (soft 17)
             original_bankroll = 20000;  //starting bankroll
-            target_hours = 200;         //number of hours to play each table
-            run_count = 1000;          //number of times to play each table
+            target_hours = 100;         //number of hours to play each table
+            run_count = 5000;          //number of times to play each table
             counting = true;            //whether or not to count
-            big_small = false;           //whether we play the big/small strategy
+            big_small = false;          //whether we play the big/small strategy
         }
 
         int num_runs = 0;
